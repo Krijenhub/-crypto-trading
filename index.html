@@ -216,6 +216,22 @@ footer{padding:0 14px 24px;text-align:center;color:var(--muted);font-size:11px;m
     const trade={id:Date.now(),symbol:selectedSymbol(),side,entry,stop,target,qty,status:"OPEN",openedAt:new Date().toISOString(),exit:null,pnl:null};
     state.trades.unshift(trade);saveTrades();renderTrades();alert("Paper trade opened. No real order was sent.");
   }
+  function testPaperTrade(){
+  const a=state.analysis, entry=state.lastPrice;
+  if(!a||!(entry>0)){alert("Refresh data first.");return}
+  const av=a.atr[a.index]||entry*0.01;
+  const stop=entry-1.5*av, target=entry+3*av;
+  const balance=+$("balance").value, rp=+$("riskPct").value;
+  if(!(balance>0&&rp>0)){alert("Check balance and risk.");return}
+  const qty=(balance*rp/100)/(entry-stop);
+  state.trades.unshift({
+    id:Date.now(),symbol:selectedSymbol(),side:"LONG",
+    entry,stop,target,qty,status:"OPEN",
+    openedAt:new Date().toISOString(),exit:null,pnl:null,isTest:true
+  });
+  saveTrades();
+  alert("Test paper trade opened. Virtual simulation only.");
+  }
   function closeTrade(id){
     const t=state.trades.find(x=>x.id===id);if(!t||t.status!=="OPEN")return;
     const px=state.lastPrice;if(!(px>0)){alert("Load market data first.");return}
@@ -252,7 +268,7 @@ footer{padding:0 14px 24px;text-align:center;color:var(--muted);font-size:11px;m
   $("resetTrades").addEventListener("click",()=>{if(confirm("Delete all paper trades saved in this browser?")){state.trades=[];saveTrades()}});
   window.addEventListener("resize",drawChart);
   renderTrades();loadData();
-})();
+$("testTrade").addEventListener("click",testPaperTrade);})();
 </script>
 </body>
 </html>
