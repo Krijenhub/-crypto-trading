@@ -1,1 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<title>TradeLab Crypto — Paper Trading</title>
+<style>
+:root{--bg:#0b1220;--panel:#111c2e;--panel2:#162338;--line:#26364d;--text:#edf3fc;--muted:#9eb0c9;--green:#35d39a;--red:#ff6878;--blue:#77a9ff;--yellow:#f4c96b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{padding:18px 16px 12px;border-bottom:1px solid var(--line);background:#0e1727;position:sticky;top:0;z-index:5}
+.brand{font-weight:800;font-size:20px;letter-spacing:.2px}.sub{font-size:12px;color:var(--muted);margin-top:3px}
+.wrap{max-width:980px;margin:auto;padding:14px;display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px;min-width:0}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.grow{flex:1;min-width:120px}
+label{font-size:12px;color:var(--muted);display:block;margin-bottom:5px}
+select,input,button{font:inherit;border-radius:9px;border:1px solid var(--line);background:var(--panel2);color:var(--text);padding:10px;max-width:100%}
+select,input{width:100%}button{cursor:pointer;font-weight:650}button.primary{background:var(--blue);border-color:var(--blue);color:#081222}button:disabled{opacity:.5;cursor:not-allowed}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.metric{background:var(--panel2);border-radius:10px;padding:11px;min-width:0}.metric .k{font-size:11px;color:var(--muted)}.metric .v{font-size:17px;font-weight:750;overflow-wrap:anywhere;margin-top:3px}
+h2{font-size:16px;margin:0 0 12px}h3{font-size:14px;margin:0 0 8px}.muted{color:var(--muted)}.small{font-size:12px}.status{font-size:12px;color:var(--muted);margin-top:8px}.pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#24334a;font-size:11px;font-weight:750}.green{color:var(--green)}.red{color:var(--red)}.yellow{color:var(--yellow)}
+#chart{width:100%;height:260px;display:block;background:#0d1726;border-radius:10px}
+.notice{padding:10px;border-radius:9px;background:#1c2b41;color:#b9c9df;font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:12px}th,td{text-align:left;padding:8px 5px;border-bottom:1px solid var(--line)}th{color:var(--muted);font-weight:600}
+.tablewrap{overflow-x:auto}.actionrow{display:flex;gap:8px;flex-wrap:wrap}.actionrow button{flex:1}
+footer{padding:0 14px 24px;text-align:center;color:var(--muted);font-size:11px;max-width:980px;margin:auto}
+@media(min-width:760px){.wrap{grid-template-columns:1.15fr .85fr}.wide{grid-column:1/-1}.wrap header{position:static}}
+@media(max-width:400px){.grid3{grid-template-columns:1fr 1fr}.metric .v{font-size:15px}.card{padding:11px}.wrap{padding:9px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand">TradeLab Crypto</div>
+  <div class="sub">Intraday research · Historical data · Paper trading only</div>
+</header>
+<main class="wrap">
+  <section class="card wide">
+    <div class="row">
+      <div class="grow"><label for="symbol">Crypto pair</label><select id="symbol"><option>BTCUSDT</option><option>ETHUSDT</option><option>SOLUSDT</option></select></div>
+      <div class="grow"><label for="interval">Candle timeframe</label><select id="interval"><option value="5m">5 minutes</option><option value="15m">15 minutes</option><option value="1h">1 hour</option></select></div>
+      <div><label>&nbsp;</label><button id="refresh" class="primary">Refresh data</button></div>
+    </div>
+    <div id="status" class="status">Ready. Load historical market data to begin.</div>
+  </section>
 
+  <section class="card wide">
+    <div class="row between" style="margin-bottom:10px">
+      <div><h2 id="chartTitle">BTCUSDT</h2><div class="small muted" id="chartSub">Candles with EMA 20 and EMA 50</div></div>
+      <span id="trendPill" class="pill">Waiting for data</span>
+    </div>
+    <canvas id="chart" aria-label="Candlestick price chart"></canvas>
+    <div class="small muted" style="margin-top:8px">Chart shows the latest historical candles. The newest candle may still be forming; signals use the previous completed candle.</div>
+  </section>
+
+  <section class="card">
+    <h2>Market analysis</h2>
+    <div class="grid2">
+      <div class="metric"><div class="k">Latest close</div><div class="v" id="closeVal">—</div></div>
+      <div class="metric"><div class="k">Trend</div><div class="v" id="trendVal">—</div></div>
+      <div class="metric"><div class="k">EMA 20</div><div class="v" id="ema20Val">—</div></div>
+      <div class="metric"><div class="k">EMA 50</div><div class="v" id="ema50Val">—</div></div>
+      <div class="metric"><div class="k">ATR (14)</div><div class="v" id="atrVal">—</div></div>
+      <div class="metric"><div class="k">Rule score</div><div class="v" id="scoreVal">—</div></div>
+    </div>
+    <div id="signalBox" class="notice" style="margin-top:12px">Load data to calculate the setup.</div>
+  </section>
+
+  <section class="card">
+    <h2>Paper trade planner</h2>
+    <div class="grid2">
+      <div><label for="balance">Virtual account balance (USDT)</label><input id="balance" type="number" min="1" step="any" value="1000"></div>
+      <div><label for="riskPct">Risk per trade (%)</label><input id="riskPct" type="number" min="0.1" max="2" step="0.1" value="0.5"></div>
+      <div><label for="entry">Entry price</label><input id="entry" type="number" step="any" placeholder="Calculated from data"></div>
+      <div><label for="stop">Stop-loss price</label><input id="stop" type="number" step="any" placeholder="Calculated from data"></div>
+      <div><label for="target">Target price</label><input id="target" type="number" step="any" placeholder="Calculated from data"></div>
+      <div><label for="quantity">Suggested quantity (base asset)</label><input id="quantity" readonly value="—"></div>
+    </div>
+    <div class="grid3" style="margin-top:10px">
+      <div class="metric"><div class="k">Planned risk</div><div class="v" id="riskAmt">—</div></div>
+      <div class="metric"><div class="k">Reward / risk</div><div class="v" id="rrVal">—</div></div>
+      <div class="metric"><div class="k">Estimated notional</div><div class="v" id="notionalVal">—</div></div>
+    </div>
+    <div class="actionrow" style="margin-top:12px">
+      <button id="useSetup">Use suggested setup</button>
+      <button id="openTrade" class="primary">Open paper trade</button>
+    </div>
+    <div class="small muted" style="margin-top:8px">Position size is a simple estimate and does not include fees, slippage, leverage, or exchange-specific rules.</div>
+  </section>
+
+  <section class="card wide">
+    <div class="row between">
+      <h2>Paper trades</h2>
+      <button id="resetTrades">Reset journal</button>
+    </div>
+    <div class="grid3" style="margin-bottom:12px">
+      <div class="metric"><div class="k">Virtual balance</div><div class="v" id="balanceVal">1000 USDT</div></div>
+      <div class="metric"><div class="k">Closed P/L</div><div class="v" id="pnlVal">0 USDT</div></div>
+      <div class="metric"><div class="k">Open trades</div><div class="v" id="openCount">0</div></div>
+    </div>
+    <div class="tablewrap"><table><thead><tr><th>Pair</th><th>Side</th><th>Entry</th><th>Stop</th><th>Target</th><th>Status</th><th>Action</th></tr></thead><tbody id="tradesBody"><tr><td colspan="7" class="muted">No paper trades yet.</td></tr></tbody></table></div>
+    <div class="small muted" style="margin-top:8px">Open trades can be closed manually at the latest loaded price. Paper trade data is saved only in this browser on this device.</div>
+  </section>
+  <section class="card wide">
+    <h2>Safety and data notes</h2>
+    <div class="notice">This is an educational prototype, not financial advice. It uses public Binance spot candles and does not place real orders. Public endpoints can be unavailable or rate-limited. Do not treat a rule score as a probability of profit. Paper-trade outcomes are simplified simulations.</div>
+  </section>
+</main>
+<footer>TradeLab Crypto · No real-money execution · Data provider: Binance public spot market data</footer>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const state = { candles: [], trades: readTrades(), lastPrice: null, analysis: null };
+  const money = n => Number.isFinite(n) ? n.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:4}) : "—";
+  const fmt = n => Number.isFinite(n) ? n.toLocaleString(undefined,{maximumFractionDigits:8}) : "—";
+  const selectedSymbol = () => $("symbol").value;
+  const selectedInterval = () => $("interval").value;
+  function readTrades(){ try{return JSON.parse(localStorage.getItem("tradelab_paper_trades")||"[]")}catch{return []} }
+  function saveTrades(){ localStorage.setItem("tradelab_paper_trades",JSON.stringify(state.trades)); renderTrades(); }
+  function setStatus(msg, error=false){ $("status").textContent=msg; $("status").style.color=error?"var(--red)":"var(--muted)"; }
+  function ema(values, period){
+    const out = Array(values.length).fill(null); if(values.length<period)return out;
+    let sum=0; for(let i=0;i<period;i++)sum+=values[i];
+    let prev=sum/period; out[period-1]=prev; const k=2/(period+1);
+    for(let i=period;i<values.length;i++){prev=values[i]*k+prev*(1-k);out[i]=prev}
+    return out;
+  }
+  function atr(candles, period=14){
+    const tr=candles.map((c,i)=>i===0?c.high-c.low:Math.max(c.high-c.low,Math.abs(c.high-candles[i-1].close),Math.abs(c.low-candles[i-1].close)));
+    const out=Array(candles.length).fill(null); if(tr.length<period)return out;
+    let v=tr.slice(0,period).reduce((a,b)=>a+b,0)/period;out[period-1]=v;
+    for(let i=period;i<tr.length;i++){v=(v*(period-1)+tr[i])/period;out[i]=v}return out;
+  }
+  async function loadData(){
+    const symbol=selectedSymbol(), interval=selectedInterval();
+    $("refresh").disabled=true; setStatus("Loading historical candles from Binance...");
+    try{
+      const url=`https://api.binance.com/api/v3/klines?symbol=${encodeURIComponent(symbol)}&interval=${encodeURIComponent(interval)}&limit=150`;
+      const response=await fetch(url);
+      if(!response.ok)throw new Error(`Market data request failed (${response.status}). Try again later.`);
+      const rows=await response.json();
+      if(!Array.isArray(rows)||!rows.length)throw new Error("No candle data returned for this pair.");
+      state.candles=rows.map(r=>({time:r[0],open:+r[1],high:+r[2],low:+r[3],close:+r[4],volume:+r[5],closed:r[6]<Date.now()}));
+      analyze(); drawChart(); setStatus(`Loaded ${rows.length} candles · ${symbol} · ${interval} · Source: Binance public spot API`);
+      updateOpenTrades();
+    }catch(err){setStatus(`${err.message||"Unable to load data."} Check internet access and try again.`,true)}
+    finally{$("refresh").disabled=false}
+  }
+  function analyze(){
+    const c=state.candles, closes=c.map(x=>x.close), e20=ema(closes,20), e50=ema(closes,50), a=atr(c,14);
+    // Use the previous candle for signal decisions to avoid using a still-forming candle.
+    const i=Math.max(0,c.length-2), prev=Math.max(0,i-1), last=c[i];
+    const longTrend=e20[i]!=null&&e50[i]!=null&&e20[i]>e50[i]&&last.close>e20[i];
+    const shortTrend=e20[i]!=null&&e50[i]!=null&&e20[i]<e50[i]&&last.close<e20[i];
+    const pullbackLong=longTrend&&c[prev].close<=e20[prev]&&last.close>e20[i];
+    const pullbackShort=shortTrend&&c[prev].close>=e20[prev]&&last.close<e20[i];
+    // Scores are rule conformance scores, not probabilities of winning.
+    let score=0;if(longTrend||shortTrend)score+=40;
+    if((longTrend&&last.close>last.open)||(shortTrend&&last.close<last.open))score+=20;
+    if(a[i]&&a[i]/last.close<0.025)score+=20;
+    if(pullbackLong||pullbackShort)score+=20;
+    let side=pullbackLong?"LONG":pullbackShort?"SHORT":"WAIT";
+    state.analysis={index:i,ema20:e20,ema50:e50,atr:a,side,score,last,trend:longTrend?"Bullish":shortTrend?"Bearish":"Mixed"};
+    state.lastPrice=c[c.length-1].close;
+    $("chartTitle").textContent=selectedSymbol()+" · "+money(state.lastPrice);
+    $("closeVal").textContent=money(last.close);
+    $("trendVal").textContent=state.analysis.trend;
+    $("trendVal").className="v "+(longTrend?"green":shortTrend?"red":"");
+    $("ema20Val").textContent=money(e20[i]);$("ema50Val").textContent=money(e50[i]);$("atrVal").textContent=money(a[i]);$("scoreVal").textContent=score+"/100";
+    $("trendPill").textContent=state.analysis.trend.toUpperCase();
+    $("trendPill").style.color=longTrend?"var(--green)":shortTrend?"var(--red)":"var(--yellow)";
+    $("signalBox").textContent=side==="WAIT"?
+      `No pullback confirmation under the current example rules. Trend: ${state.analysis.trend}. Wait for a completed-candle setup; do not force a trade.`:
+      `${side} candidate under example rules. Score ${score}/100 is rule conformance only, not win probability. Verify the chart, costs and risk before paper trading.`;
+    $("signalBox").style.borderLeft=`3px solid ${side==="LONG"?"var(--green)":side==="SHORT"?"var(--red)":"var(--yellow)"}`;
+    updatePlan();
+  }
+  function drawChart(){
+    const canvas=$("chart"), rect=canvas.getBoundingClientRect(), dpr=window.devicePixelRatio||1;
+    canvas.width=Math.max(1,Math.floor(rect.width*dpr));canvas.height=Math.max(1,Math.floor(rect.height*dpr));
+    const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+    const w=rect.width,h=rect.height,c=state.candles.slice(-70);if(!c.length)return;
+    ctx.fillStyle="#0d1726";ctx.fillRect(0,0,w,h);
+    const max=Math.max(...c.map(x=>x.high)),min=Math.min(...c.map(x=>x.low)),pad=18,ph=h-2*pad;
+    const y=p=>pad+(max-p)/(max-min||1)*ph;
+    ctx.strokeStyle="#26364d";ctx.lineWidth=1;
+    for(let j=0;j<4;j++){const yy=pad+j*ph/3;ctx.beginPath();ctx.moveTo(0,yy);ctx.lineTo(w,yy);ctx.stroke()}
+    const step=w/c.length,cw=Math.max(2,step*.58);
+    c.forEach((x,i)=>{const xx=i*step+step/2,up=x.close>=x.open,col=up?"#35d39a":"#ff6878";ctx.strokeStyle=col;ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(xx,y(x.high));ctx.lineTo(xx,y(x.low));ctx.stroke();const top=y(Math.max(x.open,x.close)),bh=Math.max(1,Math.abs(y(x.open)-y(x.close)));ctx.fillRect(xx-cw/2,top,cw,bh)});
+    const full=state.candles, e20=ema(full.map(x=>x.close),20).slice(-70), e50=ema(full.map(x=>x.close),50).slice(-70);
+    function line(vals,color){ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=1.6;let started=false;vals.forEach((v,i)=>{if(v==null)return;const xx=i*step+step/2,yy=y(v);if(!started){ctx.moveTo(xx,yy);started=true}else ctx.lineTo(xx,yy)});ctx.stroke()}
+    line(e20,"#77a9ff");line(e50,"#f4c96b");
+    ctx.fillStyle="#9eb0c9";ctx.font="10px system-ui";ctx.fillText(money(max),4,11);ctx.fillText(money(min),4,h-4);
+  }
+  function updatePlan(){
+    const a=state.analysis;if(!a||!a.last)return;
+    const entry=+($("entry").value)||a.last.close, atrVal=a.atr[a.index]||entry*.01;
+    const side=a.side==="SHORT"?"SHORT":"LONG";
+    const stop=side==="SHORT"?entry+1.5*atrVal:entry-1.5*atrVal;
+    const target=side==="SHORT"?entry-3*atrVal:entry+3*atrVal;
+    if(!$("entry").dataset.edited)$("entry").value=entry;
+    if(!$("stop").dataset.edited)$("stop").value=stop;
+    if(!$("target").dataset.edited)$("target").value=target;
+    const e=+$("entry").value,s=+$("stop").value,t=+$("target").value,bal=+$("balance").value,rp=+$("riskPct").value;
+    const dist=Math.abs(e-s),risk=bal*rp/100,qty=dist>0?risk/dist:0,notional=qty*e, reward=Math.abs(t-e);
+    $("quantity").value=qty>0?fmt(qty):"—";$("riskAmt").textContent=money(risk)+" USDT";$("rrVal").textContent=dist>0?(reward/dist).toFixed(2)+" : 1":"—";$("notionalVal").textContent=money(notional)+" USDT";
+  }
+  function resetPlanEdited(){["entry","stop","target"].forEach(id=>delete $(id).dataset.edited)}
+  function useSetup(){resetPlanEdited();if(state.analysis){const a=state.analysis,entry=state.lastPrice,atrVal=a.atr[a.index]||entry*.01,short=a.side==="SHORT";$("entry").value=entry;$("stop").value=short?entry+1.5*atrVal:entry-1.5*atrVal;$("target").value=short?entry-3*atrVal:entry+3*atrVal;["entry","stop","target"].forEach(id=>$(id).dataset.edited="true");updatePlan()}}
+  function openTrade(){
+    if(!state.analysis || state.analysis.side==="WAIT") { alert("There is no qualifying setup under the current example rules. Wait for a LONG or SHORT candidate, or review the strategy before paper trading."); return; }
+    const entry=+$("entry").value,stop=+$("stop").value,target=+$("target").value,qty=+$("quantity").value;
+    if(!(entry>0&&stop>0&&target>0&&qty>0)){alert("Load data and check entry, stop-loss, target, and quantity.");return}
+    const side=state.analysis&&state.analysis.side==="SHORT"?"SHORT":"LONG";
+    if((side==="LONG"&&(stop>=entry||target<=entry))||(side==="SHORT"&&(stop<=entry||target>=entry))){alert("For a LONG trade, stop must be below entry and target above entry. For SHORT, the reverse applies.");return}
+    const trade={id:Date.now(),symbol:selectedSymbol(),side,entry,stop,target,qty,status:"OPEN",openedAt:new Date().toISOString(),exit:null,pnl:null};
+    state.trades.unshift(trade);saveTrades();renderTrades();alert("Paper trade opened. No real order was sent.");
+  }
+  function closeTrade(id){
+    const t=state.trades.find(x=>x.id===id);if(!t||t.status!=="OPEN")return;
+    const px=state.lastPrice;if(!(px>0)){alert("Load market data first.");return}
+    t.exit=px;t.status="CLOSED";t.closedAt=new Date().toISOString();t.pnl=(t.side==="LONG"?(px-t.entry):(t.entry-px))*t.qty;
+    saveTrades();
+  }
+  function updateOpenTrades(){
+    state.trades.forEach(t=>{if(t.status==="OPEN"&&t.symbol===selectedSymbol()){
+      const p=state.lastPrice;
+      if((t.side==="LONG"&&p<=t.stop)||(t.side==="SHORT"&&p>=t.stop)){t.status="CLOSED";t.exit=t.stop;t.pnl=(t.side==="LONG"?(t.exit-t.entry):(t.entry-t.exit))*t.qty;t.closedAt=new Date().toISOString();t.exitReason="Simulated stop"}
+      else if((t.side==="LONG"&&p>=t.target)||(t.side==="SHORT"&&p<=t.target)){t.status="CLOSED";t.exit=t.target;t.pnl=(t.side==="LONG"?(t.exit-t.entry):(t.entry-t.exit))*t.qty;t.closedAt=new Date().toISOString();t.exitReason="Simulated target"}
+    }});saveTrades();
+  }
+  function renderTrades(){
+    const body=$("tradesBody");body.innerHTML="";
+    if(!state.trades.length)body.innerHTML='<tr><td colspan="7" class="muted">No paper trades yet.</td></tr>';
+    state.trades.forEach(t=>{
+      const tr=document.createElement("tr");
+      const cells=[t.symbol,t.side,money(t.entry),money(t.stop),money(t.target),t.status+(t.pnl!=null?" · "+money(t.pnl):"")];
+      cells.forEach((v,i)=>{const td=document.createElement("td");td.textContent=v;if(i===1)td.className=t.side==="LONG"?"green":"red";tr.appendChild(td)});
+      const td=document.createElement("td");
+      if(t.status==="OPEN"){const b=document.createElement("button");b.textContent="Close";b.onclick=()=>closeTrade(t.id);td.appendChild(b)}else td.textContent=t.exit!=null?"Exit "+money(t.exit):"—";
+      tr.appendChild(td);body.appendChild(tr);
+    });
+    const pnl=state.trades.filter(t=>t.pnl!=null).reduce((s,t)=>s+t.pnl,0);
+    $("pnlVal").textContent=money(pnl)+" USDT";$("pnlVal").className="v "+(pnl>=0?"green":"red");
+    $("openCount").textContent=state.trades.filter(t=>t.status==="OPEN").length;
+    $("balanceVal").textContent=money(+$("balance").value+pnl)+" USDT";
+  }
+  $("refresh").addEventListener("click",loadData);
+  $("symbol").addEventListener("change",loadData);$("interval").addEventListener("change",loadData);
+  $("useSetup").addEventListener("click",useSetup);$("openTrade").addEventListener("click",openTrade);
+  ["entry","stop","target","balance","riskPct"].forEach(id=>$(id).addEventListener("input",()=>{if(["entry","stop","target"].includes(id))$(id).dataset.edited="true";updatePlan();renderTrades()}));
+  $("resetTrades").addEventListener("click",()=>{if(confirm("Delete all paper trades saved in this browser?")){state.trades=[];saveTrades()}});
+  window.addEventListener("resize",drawChart);
+  renderTrades();loadData();
+})();
+</script>
+</body>
+</html>
